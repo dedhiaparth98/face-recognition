@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    
+    <!-- Google distributed JQUERY -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Custom CSS for Layout -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+    <title>Face Recognition</title>
+</head>
+<body>
+    <div id="header">
+        <h1>Face Recognition Software</h1>
+        <p>
+            This is light-weight Flask based application which will run the Face Recognition Software. 
+            This tool will help you to add people to your data base as well as run it in real time.
+            For more details about the model training check out my blog post.
+        </p>
+    </div>
+
+    <div id="sticky-note">
+        <p>If you have already added the member. Click here to skip this step</p>
+    </div>
+
+    <div id="enter-name">
+        <div id="input-name-div">
+            <label for="name-of-person">Enter name of the Person : </label>
+            <input type="text" id="name-of-person" name="name-of-person">
+        </div>
+        <div id="button-name-div">
+            <button id="submit-name-of-person">Submit</button>
+            <p id="change-name-of-person">Refresh for new submission</p>
+        </div>
+    </div>
+
+    <div id="instructions">
+        
+        <div id="capture-instructions">
+            <b>Note:</b> 8-10 images for a candidate are suffice. If you use spectacles, take images with and without them.
+            Click on the captured images for viewing them <i>(Delete option also provided)</i>.
+        </div>
+
+        <div id="image-count-instruction">
+            <button id="submit-all-images-button">Submit <b>0</b> Images</button>
+        </div>
+
+    </div>
+    
+    <div id="video-photo">
+
+        <div id="video-div">
+            <button id="take-photo-button">Take Photo</button>
+            <video id="webcam-video"></video>
+        </div>
+
+        <div id="photo-div"></div>
+
+    </div>
+
+    <canvas id="webcam-canvas"></canvas>
+
+    <div id="image-modal-div">
+        <span id="close-image-modal">&times;</span>
+        <img id="image-modal-img"></img>
+        <button id="delete-modal-image-button">Delete</button>
+    </div>
+
+    <div id="spinner-div">
+        <div id="spinner">
+        </div>
+        <div id="spinner-text">
+            Generating Features
+        </div>
+    </div>
+
+    <script>
+
+        $(document).ready(function(){
+
+            // Submitting the name to backend
+            $("#submit-name-of-person").click(function(){
+                let name = $("#name-of-person").val();
+                if (name === '' || name === null || name === undefined){
+                    alert("Please enter a name before submitting");
+                }
+                else{
+                    $.ajax({
+                        url: '/submit-name',
+                        type: 'post',
+                        data: {name : name},
+                        success:function(data){
+                            if (data === 'SUCCESS'){
+                                $("#name-of-person").attr('readonly', true);
+                                $("#submit-name-of-person").css("display", "none");
+                                $("#take-photo-button").css("display", "none");
+                                $("#change-name-of-person").css("display", "inline-block");
+                                $("#video-photo").css("display", "flex");
+                                $("#instructions").css("display", "flex");
+                                startup();
+                            }
+                            else{
+                                alert("Name Already exists");
+                            }
+                        },
+                        error:function(error){
+                            alert("Some backend error");
+                        }
+                    });
+                }
+            });
+
+            var video_container = null;
+            var canvas_container = null;
+            var captured_image_counter = 0;
+
+            var width = 640;
+            var height = 480;
+
+            function startup(){
+
+                canvas_container = document.getElementById("webcam-canvas");
+                video_container = document.getElementById("webcam-video");
+                navigator.mediaDevices.getUserMedia({'video':true})
+                .then(stream => {
+                    video_container.srcObject = stream;
+                    video_container.play();
+                    $("#take-photo-button").css("display", "block");
+                })
+                .catch(error => {
+                    alert("Video Processing error", error);
+                })
+            }
+
+            function take_photo(){
+                var context = canvas_container.getContext("2d");
+                if (width && height) {
+                    canvas_container.width = width;
+                    canvas_container.height = height;
+
+                    context.drawImage(video_container, 0, 0, width, height);
+
+                    var data = canvas_container.toDataURL('image/png');
+                    var image_style = "top: " + 15 * captured_image_counter + "px;";
+                    image_style += " z-index: " + parseInt(captured_image_counter) + 1;
+                    var image_id = "captured-image-" + captured_image_counter;
+
+                    var attributes = {id : image_id, src: data, style: image_style, class: 'captured-image'};
+                    $("#photo-div").append($("<img>", attributes));
+
+                    captured_image_counter++;
+                    $("#submit-all-images-button").html("Submit <b>" + captured_image_counter + "</b> images");
+                }
+            }
+            
+            $("#take-photo-button").click(take_photo);
+
+            $("#submit-all-images-button").click(function(){
+                if (captured_image_counter === 0){
+                    alert("You need to click some photos");
+                }
+                else{
+                    $("#spinner-div").css("display", "block");
+                    let images_to_be_sent = []
+                    let person_name = $("#name-of-person").val();
+                    $("#photo-div > img").each(function(){
+                        images_to_be_sent.push($(this).attr('src'));
+                    });
+                    images_to_be_sent = JSON.stringify(images_to_be_sent);
+                    $.ajax({
+                        url:'/submit-photos',
+                        type: 'post',
+                        data: {
+                            name: person_name,
+                            images: images_to_be_sent
+                        },
+                        success:function(data){
+                            $("#spinner-div").css("display", "none");
+                            window.location.href = window.location.href + data;
+                        },
+                        error:function(err){
+                            alert(err);
+                        }
+                    });
+                }
+            });
+
+            $("div#photo-div").on('click', 'img', function(){
+                var id = $(this).attr('id');
+
+                var image = document.getElementById(id);
+                var modal = document.getElementById("image-modal-div");
+                var modal_image = document.getElementById("image-modal-img");
+
+                image.onclick = function(){
+                    modal.style.display = "block";
+                    modal_image.src = this.src;
+                    $("#delete-modal-image-button").data('id', id);
+                }
+
+                let span = document.getElementById("close-image-modal");
+                
+                span.onclick = function(){
+                    modal.style.display = "none";
+                }
+            });
+
+            $("#delete-modal-image-button").click(function(){
+                let delete_image_id = $(this).data('id');
+                $("#"+delete_image_id).remove();
+
+                var modal = document.getElementById("image-modal-div");
+                modal.style.display = "none";
+
+                var temp_counter = 0;
+                $("#photo-div > img").each(function(){
+                    var id_element = "captured-image-"+temp_counter;
+                    $(this).removeAttr('style');
+                    $(this).css("top", 15 * temp_counter + "px");
+                    $(this).css("z-index", parseInt(temp_counter)+1);
+                    $(this).attr('id', id_element);
+                    temp_counter += 1;
+                });
+
+                captured_image_counter = temp_counter;
+                $("#submit-all-images-button").html("Submit <b>" + captured_image_counter + "</b> images");
+
+            });
+
+        });
+
+    </script>
+
+</body>
+</html>

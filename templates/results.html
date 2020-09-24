@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    
+    <!-- Google distributed JQUERY -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- SOCKET IO JS for socket Connection -->
+    <!-- Uncomment the below script only if you plan to use socket connection -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha512-v8ng/uGxkge3d1IJuEo6dJP8JViyvms0cly9pnbfRxT6/31c3dRWxIiwGnMSWwZjHKOuY3EVmijs7k1jz/9bLA==" crossorigin="anonymous"></script> -->
+
+    <!-- Custom CSS for Layout -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+
+    <title>Face Recognition</title>
+</head>
+<body>
+    <div id="header">
+        <h1>Face Recognition Software</h1>
+        <p>
+            This is light-weight Flask based application which will run the Face Recognition Software. 
+            This tool will help you to add people to your data base as well as run it in real time.
+            For more details about the model training check out my blog post.
+        </p>
+    </div>
+
+    <video id="prediction-video-stream"></video>
+
+    <div id="video-prediction">
+        <img id="prediction-result-image"></img>
+    </div>
+
+    <canvas id="webcam-canvas"></canvas>
+
+    <script>
+
+        $(document).ready(function(){
+
+            var video_container = null;
+            var canvas_container = null;
+            var video_prediction = null;
+
+            var width = 640;
+            var height = 480;
+
+            function startup(){
+                video_prediction = document.getElementById("prediction-result-image");
+                canvas_container = document.getElementById("webcam-canvas");
+                video_container = document.getElementById("prediction-video-stream");
+                navigator.mediaDevices.getUserMedia({'video':true})
+                .then(stream => {
+                    video_container.srcObject = stream;
+                    video_container.play();
+                    predict_each_frame();
+                })
+                .catch(error => {
+                    console.log("Video Processing error", error);
+                })
+            }
+
+            // The below code is for socket connection. I tried using socket connection but it did not improve the speed, infact made
+            // it much slow then expected. Hence the code following it is using Ajax call and turns out it works much faster. It's 
+            // still counter intuitive to me why did this happen.
+            // var socket = io.connect("http://127.0.0.1:5000/socket-connection")
+
+            // socket.on('connection-response', data => {
+            //     if (data.data === 'Connected'){
+            //         alert("Connection Established");
+            //         startup();
+            //         let image = get_image_data_url();
+            //         socket.emit('prediction', {data: image});
+            //     }
+            // });
+
+            // socket.on('prediction-response', data => {
+            //     let image = get_image_data_url();
+            //     socket.emit('prediction', {data: image});
+
+            //     img = "data:image/png;base64," + data.img;
+            //     video_prediction.setAttribute('src', img);
+            // });
+
+            function get_image_data_url(){
+                var context = canvas_container.getContext('2d');
+                var data = ''
+                if (width && height) {
+                    canvas_container.width = width;
+                    canvas_container.height = height;
+                    context.drawImage(video_container, 0, 0, width, height);
+                    data = canvas_container.toDataURL('image/png');
+                }
+                return data;
+            }
+
+            function predict_each_frame(){
+                let data = get_image_data_url();
+                if (data !== ''){
+                    $.ajax({
+                        url: '/predict-frame',
+                        type: 'post',
+                        data: {
+                            image: data,
+                        },
+                        success:function(data){
+                            predict_each_frame();
+                            data = "data:image/png;base64," + data;
+                            video_prediction.setAttribute('src', data);
+                        },
+                        error:function(data){
+                            alert("there is some error");
+                        }
+                    });
+                }
+            }
+
+           startup();
+
+        });
+
+    </script>
+
+</body>
+</html>
