@@ -26,7 +26,7 @@ source venv/bin/activate
 ```
 Now we will install all the pip packages required for running this applications. 
 ```
-pip install -r requirement.txt
+pip install -r reqirement.txt 
 ```
 If you want to just try out the Browser-Based UI tool or run the notebook, then you can download the pre-trained model weights from [here](https://drive.google.com/file/d/1MegWliwXx2J-xHYX6iETl7hXUtLRk2sC/view?usp=sharing). After extracting the files, your directory should look like this.
 ## Check you setup
