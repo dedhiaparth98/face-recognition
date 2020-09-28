@@ -1,6 +1,6 @@
 # Face Recognition Software
 
-I have explained the details about the model structure, dataset, and other implementational details in the blog post here. Here, I will provide the steps for using this repository.
+I have explained the details about the model architecture, dataset, and other implementational details in the blog post [here](https://towardsdatascience.com/building-face-recognition-model-under-30-minutes-2d1b0ef72fda). Here, I will provide the steps for using this repository.
 
 #  Installations
 
@@ -28,8 +28,9 @@ Now we will install all the pip packages required for running this applications.
 ```
 pip install -r reqirement.txt 
 ```
-If you want to just try out the Browser-Based UI tool or run the notebook, then you can download the pre-trained model weights from [here](https://drive.google.com/file/d/1MegWliwXx2J-xHYX6iETl7hXUtLRk2sC/view?usp=sharing). After extracting the files, your directory should look like this.
-## Check you setup
+If you want to just try out the Browser-Based UI tool or run the notebook, then you can download the pre-trained model weights from [here](https://drive.google.com/file/d/1MegWliwXx2J-xHYX6iETl7hXUtLRk2sC/view?usp=sharing).
+## Check your setup
+After extracting the files, your directory should look like this.
 ```
 .
 ├── app.py
